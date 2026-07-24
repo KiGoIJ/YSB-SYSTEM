@@ -20,6 +20,147 @@ const nextStatus = {
   'Архив': 'Архив'
 };
 
+// ===== ТАКТИЧЕСКИЙ ЗВУКОВОЙ СИНТЕЗАТОР (Web Audio API) =====
+let soundEnabled = localStorage.getItem('glass_sound') !== 'false';
+
+function playSound(type) {
+    if (!soundEnabled) return;
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (type === 'hover') {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1500, ctx.currentTime);
+            gain.gain.setValueAtTime(0.003, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.04);
+        } else if (type === 'click') {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(950, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1350, ctx.currentTime + 0.07);
+            gain.gain.setValueAtTime(0.015, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.07);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.07);
+        } else if (type === 'access_granted') {
+            const now = ctx.currentTime;
+            [650, 850, 1150].forEach((freq, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                const start = now + idx * 0.08;
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, start);
+                gain.gain.setValueAtTime(0.025, start);
+                gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.15);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(start);
+                osc.stop(start + 0.15);
+            });
+        } else if (type === 'error') {
+            const now = ctx.currentTime;
+            [240, 220].forEach((freq, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                const start = now + idx * 0.15;
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(freq, start);
+                gain.gain.setValueAtTime(0.04, start);
+                gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.25);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(start);
+                osc.stop(start + 0.25);
+            });
+        }
+    } catch (e) {
+        console.log('Audio error');
+    }
+}
+
+// Глобальная делегация звуков
+document.addEventListener('mouseover', function(e) {
+    const target = e.target.closest('button, .nav-btn, .btn, .file-btn, select, input[type="checkbox"], input[type="file"]');
+    if (target && !target.disabled) {
+        playSound('hover');
+    }
+});
+
+document.addEventListener('click', function(e) {
+    const target = e.target.closest('button, .nav-btn, .btn, .file-btn, select, input[type="checkbox"], input[type="file"]');
+    if (target && !target.disabled) {
+        playSound('click');
+    }
+});
+
+// ===== ИНТЕРАКТИВНЫЙ БУТ-ЭКРАН ДЕШИФРОВАНИЯ =====
+function runDecryptionBoot(onComplete) {
+    const decryptingScreen = document.getElementById('decryptingScreen');
+    const terminalLog = document.getElementById('terminalLog');
+    const progressFill = document.getElementById('cyberProgressFill');
+    const percentDisplay = document.getElementById('cyberPercent');
+    
+    if (!decryptingScreen || !terminalLog) {
+        onComplete();
+        return;
+    }
+    
+    decryptingScreen.style.display = 'flex';
+    terminalLog.innerHTML = '';
+    progressFill.style.width = '0%';
+    percentDisplay.textContent = '0%';
+    
+    const logs = [
+        '[Инициализация тактического подключения к УСБ System Glass...]',
+        '[Чтение локальных журналов localStorage: УСПЕШНО]',
+        '[Инициализация базы материалов IndexedDB: СОЕДИНЕНО]',
+        '[Проверка целостности крипто-ключей пользователя: ОК]',
+        '[Построение локального дерева зависимостей...]',
+        '[Расшифровка баз данных обращений и сигналов...]',
+        '[Контроль безопасности среды выполнения: 100% НАДЕЖНО]',
+        '[Доступ авторизован. Локальная система запущена.]'
+    ];
+    
+    let step = 0;
+    const totalSteps = logs.length;
+    
+    function nextStep() {
+        if (step < totalSteps) {
+            const line = document.createElement('div');
+            line.className = 'terminal-line';
+            line.textContent = logs[step];
+            terminalLog.appendChild(line);
+            terminalLog.scrollTop = terminalLog.scrollHeight;
+            
+            playSound('hover');
+            
+            step++;
+            const percent = Math.round((step / totalSteps) * 100);
+            progressFill.style.width = `${percent}%`;
+            percentDisplay.textContent = `${percent}%`;
+            
+            setTimeout(nextStep, 180);
+        } else {
+            playSound('access_granted');
+            setTimeout(() => {
+                decryptingScreen.style.display = 'none';
+                onComplete();
+            }, 300);
+        }
+    }
+    
+    nextStep();
+}
+
+// ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
 function todayISO() { return new Date().toISOString().slice(0, 10); }
 function todayRu() { return new Date().toLocaleDateString('ru-RU'); }
 function fmtDate(v) {
@@ -47,6 +188,7 @@ function nextNumber(consume = false) {
 }
 function overdue(item) { return item.deadline && !['Закрыта', 'Архив'].includes(item.status) && item.deadline < todayISO(); }
 
+// ===== ПОДКЛЮЧЕНИЕ К INDEXEDDB ДЛЯ ЛОКАЛЬНЫХ ФАЙЛОВ =====
 function openDb() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -99,6 +241,7 @@ async function dbClearDocs() {
   });
 }
 
+// ===== УПРАВЛЕНИЕ ЭКРАНАМИ =====
 function showScreen(name) {
   currentScreen = name;
   $$('[data-screen]').forEach(x => x.classList.toggle('active', x.dataset.screen === name));
@@ -129,11 +272,12 @@ function initClock() {
   tick(); setInterval(tick, 1000);
 }
 
+// ===== РЕНДЕРИНГ СВОДНЫХ ДАННЫХ =====
 function renderMetrics() {
   const cases = getCases();
   const open = cases.filter(x => !['Закрыта', 'Архив'].includes(x.status));
   const late = cases.filter(overdue);
-  const riskA = cases.filter(x => (x.category || '').startsWith('А'));
+  const riskA = cases.filter(x => (x.category || '').startsWith('А') || (x.category || '').startsWith('A'));
   const docSize = cachedDocs.reduce((s, x) => s + (x.fileSize || 0), 0);
   const data = [
     ['Дела', cases.length, 'в локальном журнале', ''],
@@ -146,18 +290,21 @@ function renderMetrics() {
   if (!box) return;
   box.innerHTML = data.map(x => `<div class="metric ${x[3]}"><b>${x[1]}</b><span>${x[0]} – ${x[2]}</span></div>`).join('');
 }
+
 function renderDashboard() {
   const body = $('#recentCases');
   if (body) {
     const cases = getCases().slice(0, 6);
-    body.innerHTML = cases.length ? cases.map(item => `
-      <tr class="${overdue(item) ? 'overdue' : ''}">
+    body.innerHTML = cases.length ? cases.map((item, index) => {
+      return `
+      <tr class="${overdue(item) ? 'overdue' : ''} table-row-animate" style="animation-delay: ${index * 0.02}s">
         <td><span class="case-title">${item.number}</span><div class="sub">${fmtDate(item.created)}</div></td>
         <td>${catBadge(item.category)}</td>
         <td>${item.status}</td>
         <td>${item.target || ''}<div class="sub">${item.summary || ''}</div></td>
         <td>${item.deadline ? fmtDate(item.deadline) : ''}</td>
-      </tr>`).join('') : '<tr><td colspan="5">Дел пока нет. Создайте первое дело во вкладке «Новое дело».</td></tr>';
+      </tr>`;
+    }).join('') : '<tr><td colspan="5">Дел пока нет. Создайте первое дело во вкладке «Новое дело».</td></tr>';
   }
   const plan = $('#todayPlan');
   if (plan) {
@@ -170,6 +317,7 @@ function renderDashboard() {
   }
 }
 
+// ===== РЕГИСТРАЦИЯ ДЕЛА =====
 function formCase(form) {
   const data = Object.fromEntries(new FormData(form).entries());
   return {
@@ -235,16 +383,26 @@ function initIntake() {
     const item = formCase(form);
     if (item.number === nextNumber(false)) setCounter(getCounter() + 1);
     const cases = getCases(); cases.unshift(item); setCases(cases);
+    
+    // Пишем лог активности
+    addLogEntry(`Зарегистрировано новое дело: ${item.number} (Категория: ${item.category})`);
+    
     form.reset(); num.value = nextNumber(false); $('[data-today]', form).value = todayISO();
     renderCasePreview(); showScreen('journal');
   });
   renderCasePreview();
 }
 
+// Полноценная кириллическая поддержка категорий
 function catBadge(cat = '') {
-  const cls = cat.startsWith('А') ? 'a' : cat.startsWith('B') ? 'b' : 'c';
+  const firstChar = (cat.trim()[0] || 'C').toUpperCase();
+  let cls = 'c';
+  if (firstChar === 'А' || firstChar === 'A') cls = 'a';
+  else if (firstChar === 'В' || firstChar === 'B' || firstChar === 'Б') cls = 'b';
   return `<span class="badge ${cls}">${cat || 'C'}</span>`;
 }
+
+// ===== РЕНДЕРИНГ ЖУРНАЛА ДЕЛ =====
 function renderJournal() {
   const body = $('#casesBody'); if (!body) return;
   const q = ($('#caseSearch')?.value || '').toLowerCase();
@@ -255,41 +413,66 @@ function renderJournal() {
     return (!q || hay.includes(q)) && (st === 'Все' || item.status === st) && (cat === 'Все' || (item.category || '').startsWith(cat));
   });
   $('#caseCount') && ($('#caseCount').textContent = String(list.length));
-  body.innerHTML = list.length ? list.map(item => `
-    <tr class="${overdue(item) ? 'overdue' : ''}">
+  
+  // Рендерим с оберткой .actions-wrapper для предотвращения бага линии
+  body.innerHTML = list.length ? list.map((item, index) => `
+    <tr class="${overdue(item) ? 'overdue' : ''} table-row-animate" style="animation-delay: ${index * 0.02}s">
       <td><span class="case-title">${item.number}</span><div class="sub">${fmtDate(item.created)}</div></td>
       <td>${catBadge(item.category)}</td>
       <td>${item.status}${overdue(item) ? '<div class="sub" style="color:var(--danger)">Просрочено</div>' : ''}</td>
       <td><b>${item.target || 'не указано'}</b><div class="sub">${item.summary || ''}</div></td>
       <td>${item.inspector || ''}<div class="sub">${item.deadline ? fmtDate(item.deadline) : ''}</div></td>
-      <td class="actions"><button class="btn small" data-copy-case="${item.id}">Копировать</button><button class="btn small" data-next="${item.id}">Далее</button><button class="btn small" data-close="${item.id}">Закрыть</button><button class="btn small danger" data-delete="${item.id}">Удалить</button></td>
+      <td class="actions-cell">
+        <div class="actions-wrapper">
+          <button class="btn small" data-copy-case="${item.id}">Копировать</button>
+          <button class="btn small" data-next="${item.id}">Далее</button>
+          <button class="btn small" data-close="${item.id}">Закрыть</button>
+          <button class="btn small danger" data-delete="${item.id}">Удалить</button>
+        </div>
+      </td>
     </tr>`).join('') : '<tr><td colspan="6">Дела не найдены.</td></tr>';
+    
   $$('[data-copy-case]').forEach(b => b.onclick = () => copyCase(b.dataset.copyCase));
   $$('[data-next]').forEach(b => b.onclick = () => changeStatus(b.dataset.next, 'next'));
   $$('[data-close]').forEach(b => b.onclick = () => changeStatus(b.dataset.close, 'Закрыта'));
   $$('[data-delete]').forEach(b => b.onclick = () => deleteCase(b.dataset.delete));
 }
+
 function copyCase(id) {
   const item = getCases().find(x => x.id === id); if (!item) return;
   navigator.clipboard.writeText(caseText(item));
   notify('Текст карточки скопирован.');
+  addLogEntry(`Текст дела ${item.number} скопирован в буфер обмена.`);
 }
+
 function changeStatus(id, mode) {
   const items = getCases(); const item = items.find(x => x.id === id); if (!item) return;
-  item.status = mode === 'next' ? nextStatus[item.status] : mode;
+  const oldStatus = item.status;
+  item.status = mode === 'next' ? (nextStatus[item.status] || item.status || 'Новая') : mode;
   item.history = item.history || [];
   item.history.unshift({ date: new Date().toISOString(), action: `Статус: ${item.status}` });
-  setCases(items); renderAll();
+  setCases(items); 
+  renderAll();
+  
+  addLogEntry(`Статус дела ${item.number} изменен: ${oldStatus} -> ${item.status}`);
 }
+
 function deleteCase(id) {
-  if (!confirm('Удалить дело из локального журнала?')) return;
-  setCases(getCases().filter(x => x.id !== id)); renderAll();
+  const item = getCases().find(x => x.id === id);
+  if (!item) return;
+  if (!confirm(`Удалить дело ${item.number} из локального журнала?`)) return;
+  setCases(getCases().filter(x => x.id !== id)); 
+  renderAll();
+  addLogEntry(`Удалено дело из локального журнала: ${item.number}`);
 }
+
 function initJournal() {
   ['caseSearch', 'caseStatus', 'caseCategory'].forEach(id => $('#' + id)?.addEventListener('input', renderJournal));
 }
 
+// ===== УПРАВЛЕНИЕ ЛОКАЛЬНЫМИ ДОКУМЕНТАМИ =====
 async function reloadDocs() { cachedDocs = await dbAllDocs(); }
+
 function docCardText(doc) {
   return [
     'КАРТОЧКА ДОКУМЕНТА',
@@ -306,6 +489,7 @@ function docCardText(doc) {
     'Файл хранится локально в браузере. Система не предоставляет скачивание документов.'
   ].join('\n');
 }
+
 async function initDocs() {
   const form = $('#docForm');
   if (!form) return;
@@ -331,18 +515,22 @@ async function initDocs() {
     await reloadDocs();
     renderAll();
     notify('Документ добавлен локально.');
+    addLogEntry(`Добавлен локальный документ: ${doc.title} (${doc.fileName})`);
   });
   ['docSearch','docCategoryFilter','docAccessFilter'].forEach(id => $('#' + id)?.addEventListener('input', renderDocuments));
   $('#clearDocsBtn')?.addEventListener('click', async () => {
     if (!confirm('Удалить все локально добавленные документы?')) return;
     await dbClearDocs(); await reloadDocs(); renderAll();
+    addLogEntry('Все локальные документы стерты из хранилища.');
   });
   $('#copyDocsRegistryBtn')?.addEventListener('click', () => {
     const text = cachedDocs.map(d => `${d.title}; ${d.category}; ${d.access}; ${d.fileName}; ${fmtBytes(d.fileSize)}; ${new Date(d.addedAt).toLocaleString('ru-RU')}`).join('\n');
     navigator.clipboard.writeText(text || 'Документов нет.');
     notify('Реестр документов скопирован.');
+    addLogEntry('Полный реестр локальных документов скопирован в буфер обмена.');
   });
 }
+
 function renderDocuments() {
   const grid = $('#documentsGrid'); if (!grid) return;
   const q = ($('#docSearch')?.value || '').toLowerCase();
@@ -353,38 +541,44 @@ function renderDocuments() {
     return (!q || hay.includes(q)) && (cat === 'Все' || d.category === cat) && (access === 'Все' || d.access === access);
   });
   $('#docsCount') && ($('#docsCount').textContent = String(list.length));
-  grid.innerHTML = list.length ? list.map(d => `
-    <article class="doc-card">
+  grid.innerHTML = list.length ? list.map((d, index) => `
+    <article class="doc-card table-row-animate" style="animation-delay: ${index * 0.02}s">
       <div class="actions"><span class="badge">${d.category}</span><span class="badge">${d.access}</span><span class="badge">${fmtBytes(d.fileSize)}</span></div>
       <h3>${d.title}</h3>
-      <p>${d.fileName}</p>
+      <p style="font-weight:700; color:var(--accent); font-size:12px;">${d.fileName}</p>
       <p>${d.notes || 'Без примечания.'}</p>
       <div class="actions"><button class="btn small" data-copy-doc="${d.id}">Копировать карточку</button><button class="btn small danger" data-delete-doc="${d.id}">Удалить</button></div>
     </article>`).join('') : '<div class="notice warn"><strong>Документы не добавлены.</strong>Используйте форму выше, чтобы добавить первый документ в локальное хранилище.</div>';
   $$('[data-copy-doc]').forEach(b => b.onclick = () => copyDocCard(b.dataset.copyDoc));
   $$('[data-delete-doc]').forEach(b => b.onclick = () => deleteDoc(b.dataset.deleteDoc));
 }
+
 function copyDocCard(id) {
   const doc = cachedDocs.find(x => x.id === id); if (!doc) return;
   navigator.clipboard.writeText(docCardText(doc)); notify('Карточка документа скопирована.');
-}
-async function deleteDoc(id) {
-  if (!confirm('Удалить документ из локального хранилища?')) return;
-  await dbDeleteDoc(id); await reloadDocs(); renderAll();
+  addLogEntry(`Карточка документа ${doc.title} скопирована в буфер.`);
 }
 
+async function deleteDoc(id) {
+  const doc = cachedDocs.find(x => x.id === id); if (!doc) return;
+  if (!confirm(`Удалить документ ${doc.title} из локального хранилища?`)) return;
+  await dbDeleteDoc(id); await reloadDocs(); renderAll();
+  addLogEntry(`Удален локальный документ: ${doc.title}`);
+}
+
+// ===== ОТЧЕТНОСТЬ =====
 function renderReport() {
   const out = $('#reportOutput'); if (!out) return;
   const cases = getCases();
   const open = cases.filter(x => !['Закрыта','Архив'].includes(x.status));
   const late = cases.filter(overdue);
-  const a = cases.filter(x => (x.category || '').startsWith('А'));
+  const a = cases.filter(x => (x.category || '').startsWith('А') || (x.category || '').startsWith('A'));
   const docSize = cachedDocs.reduce((s, x) => s + (x.fileSize || 0), 0);
   out.textContent = [
     'НЕДЕЛЬНАЯ СВОДКА УСБ',
     `Дата: ${todayRu()}`,
     '',
-    `Дел всего: ${cases.length}`,
+    `Дела всего: ${cases.length}`,
     `Открыто: ${open.length}`,
     `Просрочено: ${late.length}`,
     `Категория А: ${a.length}`,
@@ -404,12 +598,22 @@ function renderReport() {
     '- провести профилактику повторяющихся нарушений.'
   ].join('\n');
 }
+
 function initReports() {
-  $('#copyReportBtn')?.addEventListener('click', () => { navigator.clipboard.writeText($('#reportOutput').textContent); notify('Отчет скопирован.'); });
+  $('#copyReportBtn')?.addEventListener('click', () => { 
+    navigator.clipboard.writeText($('#reportOutput').textContent); 
+    notify('Отчет скопирован.'); 
+    addLogEntry('Сформированная Недельная сводка скопирована в буфер обмена.');
+  });
 }
 
+// ===== НАСТРОЙКИ СИСТЕМЫ =====
 function initSettings() {
-  $('#copyCasesJsonBtn')?.addEventListener('click', () => { navigator.clipboard.writeText(JSON.stringify(getCases(), null, 2)); notify('JSON дел скопирован.'); });
+  $('#copyCasesJsonBtn')?.addEventListener('click', () => { 
+    navigator.clipboard.writeText(JSON.stringify(getCases(), null, 2)); 
+    notify('JSON дел скопирован.'); 
+    addLogEntry('Полный бэкап журнала дел (JSON) скопирован в буфер обмена.');
+  });
   $('#importCasesJsonBtn')?.addEventListener('click', () => {
     const raw = prompt('Вставьте JSON-массив дел:');
     if (!raw) return;
@@ -417,12 +621,27 @@ function initSettings() {
       const data = JSON.parse(raw);
       if (!Array.isArray(data)) throw new Error('not array');
       setCases(data); renderAll(); notify('Дела импортированы.');
+      addLogEntry(`Импортировано дел из JSON бэкапа: ${data.length}`);
     } catch { alert('Некорректный JSON.'); }
   });
-  $('#resetCounterBtn')?.addEventListener('click', () => { const n = prompt('Новый счетчик:', String(getCounter())); if (n) { setCounter(Number(n)); renderAll(); } });
-  $('#clearCasesBtn')?.addEventListener('click', () => { if (confirm('Очистить локальный журнал дел?')) { setCases([]); renderAll(); } });
+  $('#resetCounterBtn')?.addEventListener('click', () => { 
+    const n = prompt('Новый счетчик номеров дел:', String(getCounter())); 
+    if (n) { 
+        setCounter(Number(n)); 
+        renderAll(); 
+        addLogEntry(`Счетчик выдачи номеров дел переустановлен на значение: ${n}`);
+    } 
+  });
+  $('#clearCasesBtn')?.addEventListener('click', () => { 
+    if (confirm('Очистить локальный журнал дел? Это действие сотрет все записи безвозвратно.')) { 
+        setCases([]); 
+        renderAll(); 
+        addLogEntry('Журнал дел полностью очищен оператором.');
+    } 
+  });
 }
 
+// ===== БЫСТРЫЙ ПОИСК (CMD INPUT) =====
 function initCommand() {
   const input = $('#commandInput'); const results = $('#commandResults');
   if (!input || !results) return;
@@ -452,6 +671,7 @@ function initCommand() {
   input.addEventListener('blur', () => setTimeout(() => results.classList.remove('active'), 180));
 }
 
+// ===== УВЕДОМЛЕНИЯ =====
 function notify(text) {
   const n = $('#notify');
   if (!n) return alert(text);
@@ -459,6 +679,91 @@ function notify(text) {
   n.classList.remove('hidden');
   clearTimeout(n._timer);
   n._timer = setTimeout(() => n.classList.add('hidden'), 1800);
+}
+
+// ===== ИНТЕРАКТИВНЫЙ ФОН НА CANVAS =====
+function initLoginBackground() {
+    const canvas = document.getElementById('loginMatrixCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let animationFrameId;
+    
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+    
+    const particles = [];
+    const count = 40;
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 1.5 + 0.5,
+            speedX: Math.random() * 0.12 - 0.06,
+            speedY: Math.random() * 0.12 - 0.06,
+            alpha: Math.random() * 0.5 + 0.1
+        });
+    }
+    
+    let mouse = { x: null, y: null, radius: 150 };
+    window.addEventListener('mousemove', function(e) {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+    });
+    window.addEventListener('mouseleave', function() {
+        mouse.x = null;
+        mouse.y = null;
+    });
+    
+    function animate() {
+        ctx.fillStyle = '#05070c';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        particles.forEach((p, idx) => {
+            // Притяжение к мыши
+            if (mouse.x !== null && mouse.y !== null) {
+                const dx = mouse.x - p.x;
+                const dy = mouse.y - p.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist < mouse.radius) {
+                    const force = (mouse.radius - dist) / mouse.radius;
+                    p.x += (dx / dist) * force * 0.4;
+                    p.y += (dy / dist) * force * 0.4;
+                }
+            }
+            
+            p.x += p.speedX;
+            p.y += p.speedY;
+            
+            if (p.x < 0 || p.x > canvas.width) p.speedX *= -1;
+            if (p.y < 0 || p.y > canvas.height) p.speedY *= -1;
+            
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(207, 161, 52, ${p.alpha})`;
+            ctx.fill();
+            
+            // Связующие линии
+            for (let j = idx + 1; j < particles.length; j++) {
+                const p2 = particles[j];
+                const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+                if (dist < 110) {
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.strokeStyle = `rgba(207, 161, 52, ${0.06 * (1 - dist / 110)})`;
+                    ctx.lineWidth = 0.5;
+                    ctx.stroke();
+                }
+            }
+        });
+        
+        animationFrameId = requestAnimationFrame(animate);
+    }
+    animate();
 }
 
 function renderAll() {
@@ -470,9 +775,50 @@ function renderAll() {
 }
 
 async function init() {
-  initClock(); initNav(); initIntake(); initJournal(); initDocs(); initReports(); initSettings(); initCommand();
-  await reloadDocs();
-  renderAll();
+  initClock(); 
+  initNav(); 
+  initIntake(); 
+  initJournal(); 
+  initDocs(); 
+  initReports(); 
+  initSettings(); 
+  initCommand();
+  initLoginBackground();
+  
+  // Настройка звуков системы
+  const toggleBtn = document.getElementById('toggleSoundBtn');
+  if (toggleBtn) {
+      if (soundEnabled) {
+          toggleBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+          toggleBtn.classList.add('primary');
+      } else {
+          toggleBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+          toggleBtn.classList.remove('primary');
+          toggleBtn.classList.add('danger');
+      }
+      
+      toggleBtn.addEventListener('click', function() {
+          soundEnabled = !soundEnabled;
+          localStorage.setItem('glass_sound', soundEnabled);
+          if (soundEnabled) {
+              toggleBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+              toggleBtn.classList.remove('danger');
+              toggleBtn.classList.add('primary');
+              toggleBtn.title = "Звук терминала (Вкл)";
+          } else {
+              toggleBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+              toggleBtn.classList.remove('primary');
+              toggleBtn.classList.add('danger');
+              toggleBtn.title = "Звук терминала (Выкл)";
+          }
+      });
+  }
+
+  // Запуск загрузочного экрана и дешифрования данных
+  runDecryptionBoot(async () => {
+      await reloadDocs();
+      renderAll();
+  });
 }
 
 document.addEventListener('DOMContentLoaded', init);
