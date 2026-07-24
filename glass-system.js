@@ -50,7 +50,7 @@ const nextStatus = {
   'Архив': 'Архив'
 };
 
-// ===== ТАКТИЧЕСКИЙ ЗВУКОВОЙ СИНТЕЗАТОР (Web Audio API) =====
+// ===== СЛУЖЕБНЫЙ ЗВУКОВОЙ СИНТЕЗАТОР (Web Audio API) =====
 let soundEnabled = localStorage.getItem('glass_sound') !== 'false';
 
 function playSound(type) {
@@ -131,12 +131,12 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// ===== ЖУРНАЛ СИСТЕМНОЙ АКТИВНОСТИ =====
+// ===== ЖУРНАЛ СИСТЕМНОЙ АКТИВНОСТИ (Протокол логов) =====
 function addLogEntry(message) {
     const box = document.getElementById('activityLogBox');
     if (!box) return;
     const time = new Date().toLocaleTimeString();
-    const user = 'ОПЕРАТОР УСБ';
+    const user = 'ИНСПЕКТОР УСБ';
     
     const entry = document.createElement('div');
     entry.className = 'log-entry';
@@ -147,7 +147,7 @@ function addLogEntry(message) {
     playSound('hover');
 }
 
-// ===== ИНТЕРАКТИВНЫЙ БУТ-ЭКРАН ДЕШИФРОВАНИЯ =====
+// ===== ЭКРАН ЗАГРУЗКИ И ИНИЦИАЛИЗАЦИИ СЛУЖЕБНЫХ ДАННЫХ =====
 function runDecryptionBoot(onComplete) {
     const decryptingScreen = document.getElementById('decryptingScreen');
     const terminalLog = document.getElementById('terminalLog');
@@ -165,15 +165,15 @@ function runDecryptionBoot(onComplete) {
     percentDisplay.textContent = '0%';
     
     const logs = [
-        '[Инициализация тактического подключения к УСБ System Glass...]',
-        firebaseConnected ? '[Подключение к серверу базы данных Firebase: ОК]' : '[Служба Firebase недоступна: включен автономный режим]',
-        '[Проверка локального кэша localStorage: УСПЕШНО]',
-        '[Инициализация базы материалов IndexedDB: СОЕДИНЕНО]',
-        '[Проверка целостности крипто-ключей пользователя: ОК]',
-        '[Построение локального дерева зависимостей...]',
-        '[Дешифрование баз данных обращений и сигналов...]',
-        '[Контроль безопасности среды выполнения: 100% НАДЕЖНО]',
-        '[Доступ авторизован. Локально-синхронная система запущена.]'
+        '[Подключение к защищенной базе данных УСБ по г. Санкт-Петербургу и ЛО...]',
+        firebaseConnected ? '[Авторизация на удаленном сервере Firebase: УСПЕШНО]' : '[Служба синхронизации Firebase недоступна: запуск автономного режима]',
+        '[Проверка структуры локальных журналов localStorage: УСПЕШНО]',
+        '[Подключение локальной базы материалов IndexedDB: ВЫПОЛНЕНО]',
+        '[Проверка цифровых сертификатов оператора: ОК]',
+        '[Построение локального дерева связанных файлов и документов...]',
+        '[Чтение базы данных обращений и материалов проверок...]',
+        '[Завершение инициализации служебных модулей: 100% НАДЕЖНО]',
+        '[Доступ предоставлен. Рабочий журнал УСБ готов к использованию.]'
     ];
     
     let step = 0;
@@ -584,8 +584,8 @@ async function initDocs() {
     form.reset();
     await reloadDocs();
     renderAll();
-    notify('Документ добавлен локально.');
-    addLogEntry(`Добавлен локальный документ: ${doc.title} (${doc.fileName})`);
+    notify('Документ добавлен в локальный архив.');
+    addLogEntry(`Внесен локальный документ: ${doc.title} (${doc.fileName})`);
   });
   ['docSearch','docCategoryFilter','docAccessFilter'].forEach(id => $('#' + id)?.addEventListener('input', renderDocuments));
   $('#clearDocsBtn')?.addEventListener('click', async () => {
@@ -597,7 +597,7 @@ async function initDocs() {
     const text = cachedDocs.map(d => `${d.title}; ${d.category}; ${d.access}; ${d.fileName}; ${fmtBytes(d.fileSize)}; ${new Date(d.addedAt).toLocaleString('ru-RU')}`).join('\n');
     navigator.clipboard.writeText(text || 'Документов нет.');
     notify('Реестр документов скопирован.');
-    addLogEntry('Полный реестр локальных документов скопирован в буфер обмена.');
+    addLogEntry('Реестр локальных документов выгружен в буфер.');
   });
 }
 
@@ -682,7 +682,7 @@ function initSettings() {
   $('#copyCasesJsonBtn')?.addEventListener('click', () => { 
     navigator.clipboard.writeText(JSON.stringify(getCases(), null, 2)); 
     notify('JSON дел скопирован.'); 
-    addLogEntry('Полный бэкап журнала дел (JSON) скопирован в буфер обмена.');
+    addLogEntry('Резервная копия журнала дел (JSON) выгружена.');
   });
   $('#importCasesJsonBtn')?.addEventListener('click', () => {
     const raw = prompt('Вставьте JSON-массив дел:');
@@ -793,7 +793,6 @@ function initLoginBackground() {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         particles.forEach((p, idx) => {
-            // Притяжение к мыши
             if (mouse.x !== null && mouse.y !== null) {
                 const dx = mouse.x - p.x;
                 const dy = mouse.y - p.y;
@@ -816,7 +815,6 @@ function initLoginBackground() {
             ctx.fillStyle = `rgba(207, 161, 52, ${p.alpha})`;
             ctx.fill();
             
-            // Связующие линии
             for (let j = idx + 1; j < particles.length; j++) {
                 const p2 = particles[j];
                 const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
@@ -887,9 +885,8 @@ async function init() {
   // Запуск загрузочного экрана и дешифрования данных
   runDecryptionBoot(async () => {
       if (firebaseConnected) {
-          addLogEntry("Подключение к удаленному серверу Firebase...");
+          addLogEntry("Установка защищенного соединения с сервером Firebase...");
           
-          // Выполняем анонимный вход
           auth.signInAnonymously()
               .then(() => {
                   console.log('✅ Анонимная авторизация успешна');
@@ -920,13 +917,12 @@ async function init() {
               })
               .catch(async error => {
                   console.error('Ошибка авторизации Firebase:', error);
-                  addLogEntry('⚠️ Сбой авторизации сервера! Запущен автономный режим.');
+                  addLogEntry('⚠️ Сбой соединения с сервером! Активирован автономный режим.');
                   casesCache = JSON.parse(localStorage.getItem(CASE_STORE) || '[]');
                   await reloadDocs();
                   renderAll();
               });
       } else {
-          // Автономный режим по умолчанию
           addLogEntry('Служба Firebase недоступна. Включен автономный режим.');
           casesCache = JSON.parse(localStorage.getItem(CASE_STORE) || '[]');
           await reloadDocs();
