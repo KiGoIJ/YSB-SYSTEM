@@ -3,24 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>УСБ | Рабочая система</title>
+  <title>УСБ РУ ФСБ России по г. Санкт-Петербургу и Ленинградской области</title>
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
   <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <link rel="stylesheet" href="glass.css">
 </head>
 <body>
 
-  <!-- КАНВА ДЛЯ НЕЙРОСЕТЕВОГО ФОНА -->
+  <!-- КАНВА ДЛЯ СВЯЗУЮЩЕГО ФОНА -->
   <canvas id="loginMatrixCanvas" style="position: fixed; top:0; left:0; width:100%; height:100%; z-index:-1; pointer-events:none; opacity: 0.4;"></canvas>
 
-  <!-- ЭКРАН ДЕШИФРОВАНИЯ И ЗАГРУЗКИ (Holographic Boot Overlay) -->
+  <!-- ЭКРАН ИНИЦИАЛИЗАЦИИ И ЗАГРУЗКИ -->
   <div id="decryptingScreen" class="decrypting-screen" style="display: none;">
       <div class="decrypting-container">
           <div class="scanner-line"></div>
           <div class="terminal-header">
-              <i class="fas fa-shield-alt"></i> СИСТЕМА УСБ : ДЕШИФРОВАНИЕ ЛОКАЛЬНЫХ ДАННЫХ
+              <i class="fas fa-shield-alt"></i> РУ ФСБ РОССИИ : АВТОРИЗАЦИЯ И СИНХРОНИЗАЦИЯ ДАННЫХ УСБ
           </div>
           <div class="terminal-body" id="terminalLog"></div>
           <div class="cyber-progress-bar">
@@ -33,21 +37,21 @@
 <div class="app">
   <!-- ОФИЦИАЛЬНЫЙ БЛАНК УСБ -->
   <header class="letterhead glass">
-    <div class="doc-number"></div>
+    <div class="doc-number">№ 009–GL–усб</div>
     <div class="org-block">
-      <!-- Роскошная векторная эмблема щита и меча -->
+      <!-- Эмблема щита и меча -->
       <div class="emblem-wrapper">
           <i class="fas fa-shield-alt"></i>
       </div>
       <div class="org-title">Федеральная<br>служба безопасности<br>Российской Федерации<br>(ФСБ России)</div>
       <div class="org-subtitle">Управление<br>по Ленинградской области<br>и по городу Санкт-Петербург</div>
-      <div class="org-address">191000, г. Санкт-Петербург, адрес: Литейный пр., д. 4</div>
+      <div class="org-address">191000, г. Санкт-Петербург, Литейный пр., д. 4</div>
       <div class="org-dept">Управление собственной безопасности</div>
     </div>
   </header>
 
   <div class="topbar glass">
-    <div class="brand"><i class="fas fa-shield-alt" style="color: #cfa134; margin-right: 6px;"></i> УСБ </div>
+    <div class="brand"><i class="fas fa-shield-alt" style="color: #cfa134; margin-right: 6px;"></i> РУ ФСБ РФ — УСБ</div>
     <input id="commandInput" class="command" placeholder="Быстрый поиск: дело, документ, раздел... Ctrl+K">
     <div style="display: flex; align-items: center; gap: 12px;">
       <button id="toggleSoundBtn" class="btn" style="min-height: 38px; padding: 0 14px; border-radius: 999px;" title="Звуки системы">
@@ -60,7 +64,7 @@
 
   <div class="layout">
     <aside class="sidebar glass">
-      <div class="nav-title">Система</div>
+      <div class="nav-title">Разделы системы</div>
       <button class="nav-btn" data-nav="dashboard"><i class="fas fa-chart-line"></i> Сводка <kbd>Alt+1</kbd></button>
       <button class="nav-btn" data-nav="intake"><i class="fas fa-folder-plus"></i> Новое дело <kbd>Alt+2</kbd></button>
       <button class="nav-btn" data-nav="journal"><i class="fas fa-book"></i> Журнал дел <kbd>Alt+3</kbd></button>
@@ -68,8 +72,8 @@
       <button class="nav-btn" data-nav="workflow"><i class="fas fa-project-diagram"></i> Регламент <kbd>Alt+5</kbd></button>
       <button class="nav-btn" data-nav="reports"><i class="fas fa-print"></i> Отчет <kbd>Alt+6</kbd></button>
       <button class="nav-btn" data-nav="settings"><i class="fas fa-sliders-h"></i> Настройки <kbd>Alt+7</kbd></button>
-      <div class="nav-title">Принцип</div>
-      <div class="side-note">Документы теперь не скачиваются с сайта. Они добавляются пользователем и хранятся локально в браузере.</div>
+      <div class="nav-title">Правила работы</div>
+      <div class="side-note">Учетные карточки дел синхронизируются через защищенный сервер. Файлы документов добавляются оператором лично и конфиденциально хранятся в браузере.</div>
     </aside>
 
     <main class="content">
@@ -79,32 +83,32 @@
         <div class="screen-head glass">
           <div>
             <h1>Сводка УСБ</h1>
-            <p>Минималистичная темная панель: дела, сроки, локальные документы и отчетность.</p>
+            <p>Служебная панель контроля: дела, контрольные сроки, локальные документы и отчетность.</p>
           </div>
           <div class="actions">
             <button class="btn primary" type="button" onclick="showScreen('intake')"><i class="fas fa-plus"></i> Создать дело</button>
             <button class="btn" type="button" onclick="showScreen('documents')"><i class="fas fa-file-upload"></i> Добавить документ</button>
           </div>
         </div>
-        <div class="notice danger"><strong><i class="fas fa-exclamation-triangle" style="color:var(--danger); margin-right: 6px;"></i> Публичный хостинг.</strong> GitHub Pages не является закрытой системой. Не вводите реальные секретные сведения, персональные данные и материалы проверок. Все дела и документы хранятся только локально в браузере.</div>
+        <div class="notice danger"><strong><i class="fas fa-exclamation-triangle" style="color:var(--danger); margin-right: 6px;"></i> Публичный хостинг.</strong> GitHub Pages не является закрытой ведомственной сетью. Запрещено вводить государственную тайну, реальные персональные данные и закрытые материалы проверок. Все дела синхронизируются через Firebase, файлы документов хранятся в IndexedDB.</div>
         <div id="metrics" class="metrics"></div>
         <div class="grid-2">
           <section class="panel"><h2>Последние дела</h2><div class="table-wrap"><table class="site-table"><thead><tr><th>Номер</th><th>Категория</th><th>Статус</th><th>Тема</th><th>Срок</th></tr></thead><tbody id="recentCases"></tbody></table></div></section>
           <section class="panel"><h2>План контроля</h2><div id="todayPlan" class="grid-3"></div></section>
         </div>
         <section class="panel">
-          <h2>Новая логика работы</h2>
+          <h2>Логика ведения дел</h2>
           <div class="grid-4">
-            <div class="card"><h3><i class="fas fa-folder" style="color: #cfa134;"></i> 1. Дело</h3><p>Любое обращение регистрируется как дело с номером, категорией и сроком.</p></div>
-            <div class="card"><h3><i class="fas fa-file-signature" style="color: #4299e1;"></i> 2. Материалы</h3><p>Документы добавляются в локальное хранилище и получают карточку доступа.</p></div>
+            <div class="card"><h3><i class="fas fa-folder" style="color: #cfa134;"></i> 1. Дело</h3><p>Любое обращение регистрируется как дело с номером, категорией и контрольным сроком.</p></div>
+            <div class="card"><h3><i class="fas fa-file-signature" style="color: #4299e1;"></i> 2. Материалы</h3><p>Документы добавляются в локальное хранилище и получают служебную карточку.</p></div>
             <div class="card"><h3><i class="fas fa-tasks" style="color: #48bb78;"></i> 3. Проверка</h3><p>Статусы ведутся через журнал: новая, в работе, ожидание, согласование.</p></div>
-            <div class="card"><h3><i class="fas fa-shield-alt" style="color: #9f7aea;"></i> 4. Контроль</h3><p>Отчет формируется по локальному журналу без скачивания документов.</p></div>
+            <div class="card"><h3><i class="fas fa-shield-alt" style="color: #9f7aea;"></i> 4. Контроль</h3><p>Отчет формируется по локальному журналу без скачивания оригиналов документов.</p></div>
           </div>
         </section>
       </section>
 
       <section class="screen" data-screen="intake">
-        <div class="screen-head glass"><div><h1>Новое дело</h1><p>Регистрация обращения, сигнала или поручения в локальном журнале УСБ.</p></div><div class="actions"><button class="btn" id="newNumberBtn" type="button"><i class="fas fa-barcode"></i> Выдать номер</button><button class="btn" id="resetCaseFormBtn" type="button"><i class="fas fa-undo"></i> Очистить</button></div></div>
+        <div class="screen-head glass"><div><h1>Регистрация дела</h1><p>Внесение обращения, сигнала или поручения в журнал УСБ.</p></div><div class="actions"><button class="btn" id="newNumberBtn" type="button"><i class="fas fa-barcode"></i> Выдать номер</button><button class="btn" id="resetCaseFormBtn" type="button"><i class="fas fa-undo"></i> Очистить</button></div></div>
         <div class="form-cols-grid">
           <section class="panel">
             <form id="caseForm" class="form-grid">
@@ -112,10 +116,10 @@
               <label><span>Дата регистрации</span><input class="input" type="date" name="created" data-today></label>
               <label><span>Категория</span><select name="category"><option>А – критическая</option><option>B – значимая</option><option selected>C – стандартная</option></select></label>
               <label><span>Статус</span><select name="status"><option selected>Новая</option><option>В работе</option><option>Ожидает сведений</option><option>На согласовании</option></select></label>
-              <label><span>Заявитель</span><input class="input" name="applicant" placeholder="ФИО / ник / источник"></label>
+              <label><span>Заявитель</span><input class="input" name="applicant" placeholder="ФИО / источник"></label>
               <label><span>Подразделение / роль</span><input class="input" name="unit" placeholder="Подразделение или роль"></label>
-              <label><span>Способ связи</span><input class="input" name="contact" placeholder="Discord / почта / иной канал"></label>
-              <label><span>Ответственный инспектор</span><input class="input" name="inspector" placeholder="ФИО / ник инспектора"></label>
+              <label><span>Способ связи</span><input class="input" name="contact" placeholder="Канал связи / контакты"></label>
+              <label><span>Ответственный инспектор</span><input class="input" name="inspector" placeholder="ФИО ответственного инспектора"></label>
               <label><span>Срок проверки</span><input class="input" type="date" name="deadline"></label>
               <label><span>Объект / вопрос</span><input class="input" name="target" placeholder="Сотрудник, подразделение или процедура"></label>
               <label class="full"><span>Краткая суть</span><textarea name="summary" placeholder="Что произошло, где, когда, какие правила могли быть нарушены"></textarea></label>
@@ -130,7 +134,7 @@
       </section>
 
       <section class="screen" data-screen="journal">
-        <div class="screen-head glass"><div><h1>Журнал дел</h1><p>Локальный учет обращений. Найдено: <b id="caseCount" style="color: #cfa134;">0</b>.</p></div></div>
+        <div class="screen-head glass"><div><h1>Журнал дел</h1><p>Служебный учет обращений и проверок. Найдено: <b id="caseCount" style="color: #cfa134;">0</b>.</p></div></div>
         <div class="toolbar">
           <input id="caseSearch" class="input" placeholder="Поиск по номеру, теме, заявителю, инспектору">
           <select id="caseStatus"><option>Все</option><option>Новая</option><option>В работе</option><option>Ожидает сведений</option><option>На согласовании</option><option>Закрыта</option><option>Архив</option></select>
@@ -141,16 +145,16 @@
       </section>
 
       <section class="screen" data-screen="documents">
-        <div class="screen-head glass"><div><h1>Документы</h1><p>Теперь документы не скачиваются с сайта, а добавляются в локальное хранилище браузера. Найдено: <b id="docsCount" style="color: #cfa134;">0</b>.</p></div><div class="actions"><button class="btn danger" id="clearDocsBtn" type="button"><i class="fas fa-trash-alt"></i> Очистить документы</button></div></div>
-        <div class="notice warn"><strong><i class="fas fa-info-circle" style="color: var(--warn); margin-right: 6px;"></i> Как это работает.</strong> Вы выбираете файл, система сохраняет его в IndexedDB текущего браузера и показывает карточку. Другие пользователи этот файл не видят. Кнопок скачивания документов нет.</div>
+        <div class="screen-head glass"><div><h1>Реестр документов</h1><p>Документы сохраняются локально в безопасное хранилище текущего браузера. Найдено: <b id="docsCount" style="color: #cfa134;">0</b>.</p></div><div class="actions"><button class="btn danger" id="clearDocsBtn" type="button"><i class="fas fa-trash-alt"></i> Очистить документы</button></div></div>
+        <div class="notice warn"><strong><i class="fas fa-info-circle" style="color: var(--warn); margin-right: 6px;"></i> Принцип работы.</strong> Вы выбираете файл, система сохраняет его в IndexedDB текущего браузера и показывает карточку. Другие пользователи этот файл не видят. Кнопок скачивания документов нет.</div>
         <section class="panel">
-          <h2>Добавить документ</h2>
+          <h2>Внесение документа</h2>
           <form id="docForm" class="form-grid">
             <label><span>Название документа</span><input class="input" name="docTitle" placeholder="Например: Материалы проверки УСБ–26–0001"></label>
             <label><span>Категория</span><select name="docCategory"><option>Обращение</option><option>Материалы проверки</option><option>Заключение</option><option>Приказ</option><option>Отчет</option><option>Кадры</option><option>Архив</option><option>Прочее</option></select></label>
             <label><span>Уровень доступа</span><select name="docAccess"><option>Служебный</option><option>Конфиденциальный</option><option>Особый контроль</option><option>Архив</option></select></label>
-            <label><span>Файл</span><input class="input" name="docFile" type="file"><div class="help">Файл будет храниться только в этом браузере.</div></label>
-            <label class="full"><span>Примечание</span><textarea name="docNotes" placeholder="К какому делу относится, кто ответственный, ограничения доступа"></textarea></label>
+            <label><span>Файл</span><input class="input" name="docFile" type="file"><div class="help">Файл будет храниться локально в текущем браузере.</div></label>
+            <label class="full"><span>Примечание</span><textarea name="docNotes" placeholder="К какому делу относится, ответственные должностные лица, ограничения доступа"></textarea></label>
             <div class="full actions" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;"><button class="btn primary" type="submit"><i class="fas fa-file-medical"></i> Добавить документ</button><button class="btn" type="button" id="copyDocsRegistryBtn"><i class="fas fa-file-invoice"></i> Копировать реестр</button></div>
           </form>
         </section>
@@ -167,32 +171,32 @@
       </section>
 
       <section class="screen" data-screen="workflow">
-        <div class="screen-head glass"><div><h1>Регламент</h1><p>Короткая карта процесса УСБ в новой системе.</p></div></div>
+        <div class="screen-head glass"><div><h1>Регламент проведения проверок</h1><p>Карта ведения расследований в УСБ РУ ФСБ.</p></div></div>
         <div class="workflow">
-          <div class="stage"><h3>1. Прием</h3><ul><li>Получить обращение.</li><li>Не публиковать материалы.</li><li>Определить источник.</li></ul></div>
-          <div class="stage"><h3>2. Дело</h3><ul><li>Присвоить номер.</li><li>Назначить категорию.</li><li>Установить срок.</li></ul></div>
-          <div class="stage"><h3>3. Документы</h3><ul><li>Добавить файлы локально.</li><li>Указать доступ.</li><li>Связать с делом.</li></ul></div>
-          <div class="stage"><h3>4. Проверка</h3><ul><li>Собрать объяснения.</li><li>Проверить доводы.</li><li>Вести статус.</li></ul></div>
-          <div class="stage"><h3>5. Вывод</h3><ul><li>Оформить заключение.</li><li>Предложить меры.</li><li>Уведомить допустимо.</li></ul></div>
-          <div class="stage"><h3>6. Контроль</h3><ul><li>Проверить исполнение.</li><li>Закрыть дело.</li><li>Перевести в архив.</li></ul></div>
+          <div class="stage"><h3>1. Прием</h3><ul><li>Регистрация сигнала.</li><li>Неразглашение материалов.</li><li>Установление источника.</li></ul></div>
+          <div class="stage"><h3>2. Дело</h3><ul><li>Присвоение номера.</li><li>Установка категории.</li><li>Контроль сроков.</li></ul></div>
+          <div class="stage"><h3>3. Сбор</h3><ul><li>Приобщение документов.</li><li>Определение доступа.</li><li>Связывание с делом.</li></ul></div>
+          <div class="stage"><h3>4. Проверка</h3><ul><li>Получение объяснений.</li><li>Проверка доводов.</li><li>Фиксация статусов.</li></ul></div>
+          <div class="stage"><h3>5. Вывод</h3><ul><li>Составление заключения.</li><li>Предложение мер реагирования.</li><li>Официальное уведомление.</li></ul></div>
+          <div class="stage"><h3>6. Контроль</h3><ul><li>Контроль исполнения мер.</li><li>Закрытие производства.</li><li>Передача дела в архив.</li></ul></div>
         </div>
-        <section class="panel"><h2>Главные ограничения</h2><div class="grid-3"><div class="card"><h3>Нет скачивания</h3><p>Документы не выдаются через сайт. Карточки можно только копировать как текст.</p></div><div class="card"><h3>Нет сервера</h3><p>Добавленные файлы доступны только в конкретном браузере пользователя.</p></div><div class="card"><h3>Нет публичных материалов</h3><p>Закрытые сведения не размещаются на GitHub Pages.</p></div></div></section>
+        <section class="panel"><h2>Ограничения безопасности</h2><div class="grid-3"><div class="card"><h3>Без скачивания файлов</h3><p>Оригиналы файлов не подлежат загрузке на сервер. Доступно только копирование текстовых карточек.</p></div><div class="card"><h3>Локальный реестр</h3><p>Добавленные материалы хранятся на локальном диске в IndexedDB текущего компьютера.</p></div><div class="card"><h3>Защита данных</h3><p>Запрещено публиковать закрытые государственные сведения на открытых хостингах.</p></div></div></section>
       </section>
 
       <section class="screen" data-screen="reports">
-        <div class="screen-head glass"><div><h1>Отчетность</h1><p>Сводка формируется по локальному журналу и локальным документам.</p></div><div class="actions"><button class="btn primary" id="copyReportBtn" type="button"><i class="fas fa-copy"></i> Копировать отчет</button></div></div>
-        <section class="panel"><h2>Недельная сводка</h2><div id="reportOutput" class="report-box"></div></section>
+        <div class="screen-head glass"><div><h1>Отчетность</h1><p>Сводная статистика формируется по служебному журналу.</p></div><div class="actions"><button class="btn primary" id="copyReportBtn" type="button"><i class="fas fa-copy"></i> Копировать отчет</button></div></div>
+        <section class="panel"><h2>Служебная сводка</h2><div id="reportOutput" class="report-box"></div></section>
       </section>
 
       <section class="screen" data-screen="settings">
-        <div class="screen-head glass"><div><h1>Настройки</h1><p>Управление локальными данными браузера.</p></div></div>
-        <section class="notice warn"><strong><i class="fas fa-exclamation-triangle" style="color:var(--warn); margin-right: 6px;"></i> Локальное хранение.</strong> Дела находятся в localStorage, документы – в IndexedDB. Очистка данных браузера удалит информацию.</section>
-        <section class="panel"><h2>Резерв дел</h2><div class="actions"><button class="btn primary" id="copyCasesJsonBtn" type="button"><i class="fas fa-copy"></i> Копировать JSON дел</button><button class="btn" id="importCasesJsonBtn" type="button"><i class="fas fa-file-import"></i> Импортировать JSON дел</button></div></section>
-        <section class="panel"><h2>Счетчик и очистка</h2><div class="actions"><button class="btn" id="resetCounterBtn" type="button"><i class="fas fa-sort-numeric-up"></i> Изменить счетчик номеров</button><button class="btn danger" id="clearCasesBtn" type="button"><i class="fas fa-ban"></i> Очистить журнал дел</button></div></section>
+        <div class="screen-head glass"><div><h1>Параметры и бэкап</h1><p>Управление служебной базой данных.</p></div></div>
+        <section class="notice warn"><strong><i class="fas fa-exclamation-triangle" style="color:var(--warn); margin-right: 6px;"></i> Режим хранения данных.</strong> Журнал дел синхронизирован с Firebase, а сами документы находятся в локальном IndexedDB. Очистка кэша браузера сотрет локальные файлы!</section>
+        <section class="panel"><h2>Резервная копия</h2><div class="actions"><button class="btn primary" id="copyCasesJsonBtn" type="button"><i class="fas fa-copy"></i> Скопировать бэкап дел (JSON)</button><button class="btn" id="importCasesJsonBtn" type="button"><i class="fas fa-file-import"></i> Импортировать бэкап дел (JSON)</button></div></section>
+        <section class="panel"><h2>Управление счетчиком и очистка</h2><div class="actions"><button class="btn" id="resetCounterBtn" type="button"><i class="fas fa-sort-numeric-up"></i> Сбросить счетчик номеров</button><button class="btn danger" id="clearCasesBtn" type="button"><i class="fas fa-ban"></i> Очистить журнал дел</button></div></section>
       </section>
     </main>
   </div>
-  <footer class="footer">УСБ РУ ФСБ по ЛО и по городу Санкт-Петербург · темная локальная система · без скачивания документов</footer>
+  <footer class="footer">УСБ РУ ФСБ России по г. Санкт-Петербургу и Ленинградской области · служебный журнал синхронизирован · файлы документов хранятся локально</footer>
 </div>
 <script src="glass-system.js"></script>
 </body>
