@@ -7,8 +7,38 @@ const DB_NAME = 'usb_v3_documents_db';
 const DB_VERSION = 1;
 const DOC_STORE = 'documents';
 
+// ===== FIREBASE КОНФИГУРАЦИЯ =====
+const firebaseConfig = {
+    apiKey: "AIzaSyA2RxdMUGwhXBe-rpZjQQfDYG1T9UMmaV0",
+    authDomain: "aculs-a5fe1.firebaseapp.com",
+    databaseURL: "https://aculs-a5fe1-default-rtdb.firebaseio.com",
+    projectId: "aculs-a5fe1",
+    storageBucket: "aculs-a5fe1.firebasestorage.app",
+    messagingSenderId: "176811002068",
+    appId: "1:176811002068:web:bd20e3258111cd27c5d341",
+    measurementId: "G-L8K98NSV61"
+};
+
+let firebaseConnected = false;
+let database, auth, casesRef, counterRef;
+
+if (typeof firebase !== 'undefined') {
+    try {
+        firebase.initializeApp(firebaseConfig);
+        database = firebase.database();
+        auth = firebase.auth();
+        casesRef = database.ref('glass_cases');
+        counterRef = database.ref('glass_counter');
+        firebaseConnected = true;
+    } catch (e) {
+        console.warn('Ошибка инициализации Firebase:', e);
+    }
+}
+
 let currentScreen = 'dashboard';
 let cachedDocs = [];
+let casesCache = JSON.parse(localStorage.getItem(CASE_STORE) || '[]');
+let counterCache = Number(localStorage.getItem(COUNTER_STORE) || '1');
 
 const statusOrder = ['Новая', 'В работе', 'Ожидает сведений', 'На согласовании', 'Закрыта', 'Архив'];
 const nextStatus = {
@@ -101,6 +131,22 @@ document.addEventListener('click', function(e) {
     }
 });
 
+// ===== ЖУРНАЛ СИСТЕМНОЙ АКТИВНОСТИ =====
+function addLogEntry(message) {
+    const box = document.getElementById('activityLogBox');
+    if (!box) return;
+    const time = new Date().toLocaleTimeString();
+    const user = 'ОПЕРАТОР УСБ';
+    
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<span class="log-time">[${time}]</span><span class="log-op">[${user}]:</span> ${message}`;
+    box.appendChild(entry);
+    box.scrollTop = box.scrollHeight;
+    
+    playSound('hover');
+}
+
 // ===== ИНТЕРАКТИВНЫЙ БУТ-ЭКРАН ДЕШИФРОВАНИЯ =====
 function runDecryptionBoot(onComplete) {
     const decryptingScreen = document.getElementById('decryptingScreen');
@@ -120,13 +166,14 @@ function runDecryptionBoot(onComplete) {
     
     const logs = [
         '[Инициализация тактического подключения к УСБ System Glass...]',
-        '[Чтение локальных журналов localStorage: УСПЕШНО]',
+        firebaseConnected ? '[Подключение к серверу базы данных Firebase: ОК]' : '[Служба Firebase недоступна: включен автономный режим]',
+        '[Проверка локального кэша localStorage: УСПЕШНО]',
         '[Инициализация базы материалов IndexedDB: СОЕДИНЕНО]',
         '[Проверка целостности крипто-ключей пользователя: ОК]',
         '[Построение локального дерева зависимостей...]',
-        '[Расшифровка баз данных обращений и сигналов...]',
+        '[Дешифрование баз данных обращений и сигналов...]',
         '[Контроль безопасности среды выполнения: 100% НАДЕЖНО]',
-        '[Доступ авторизован. Локальная система запущена.]'
+        '[Доступ авторизован. Локально-синхронная система запущена.]'
     ];
     
     let step = 0;
@@ -147,7 +194,7 @@ function runDecryptionBoot(onComplete) {
             progressFill.style.width = `${percent}%`;
             percentDisplay.textContent = `${percent}%`;
             
-            setTimeout(nextStep, 180);
+            setTimeout(nextStep, 150);
         } else {
             playSound('access_granted');
             setTimeout(() => {
@@ -176,16 +223,41 @@ function fmtBytes(n) {
 }
 function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
 
-function getCases() { return JSON.parse(localStorage.getItem(CASE_STORE) || '[]'); }
-function setCases(items) { localStorage.setItem(CASE_STORE, JSON.stringify(items)); }
-function getCounter() { return Number(localStorage.getItem(COUNTER_STORE) || '1'); }
-function setCounter(v) { localStorage.setItem(COUNTER_STORE, String(Math.max(1, Number(v) || 1))); }
+// ===== ПОЛНАЯ СИНХРОНИЗАЦИЯ БАЗЫ ДАННЫХ И СЧЕТЧИКА ЧЕРЕЗ FIREBASE =====
+function getCases() { return casesCache; }
+
+function setCases(items) {
+  casesCache = items;
+  localStorage.setItem(CASE_STORE, JSON.stringify(items));
+  
+  if (firebaseConnected) {
+      const data = {};
+      items.forEach(c => {
+          data[c.id] = c;
+      });
+      casesRef.set(data).catch(err => console.error('Ошибка сохранения Firebase:', err));
+  }
+}
+
+function getCounter() { return counterCache; }
+
+function setCounter(v) {
+  const val = Math.max(1, Number(v) || 1);
+  counterCache = val;
+  localStorage.setItem(COUNTER_STORE, String(val));
+  
+  if (firebaseConnected) {
+      counterRef.set(val).catch(err => console.error('Ошибка сохранения счетчика Firebase:', err));
+  }
+}
+
 function nextNumber(consume = false) {
   const n = getCounter();
   const value = `УСБ–26–${String(n).padStart(4, '0')}`;
   if (consume) setCounter(n + 1);
   return value;
 }
+
 function overdue(item) { return item.deadline && !['Закрыта', 'Архив'].includes(item.status) && item.deadline < todayISO(); }
 
 // ===== ПОДКЛЮЧЕНИЕ К INDEXEDDB ДЛЯ ЛОКАЛЬНЫХ ФАЙЛОВ =====
@@ -280,7 +352,7 @@ function renderMetrics() {
   const riskA = cases.filter(x => (x.category || '').startsWith('А') || (x.category || '').startsWith('A'));
   const docSize = cachedDocs.reduce((s, x) => s + (x.fileSize || 0), 0);
   const data = [
-    ['Дела', cases.length, 'в локальном журнале', ''],
+    ['Дела', cases.length, 'в журнале', ''],
     ['Открыто', open.length, 'требуют внимания', 'warn'],
     ['Просрочка', late.length, 'по сроку', 'danger'],
     ['Категория А', riskA.length, 'повышенный риск', 'danger'],
@@ -384,7 +456,6 @@ function initIntake() {
     if (item.number === nextNumber(false)) setCounter(getCounter() + 1);
     const cases = getCases(); cases.unshift(item); setCases(cases);
     
-    // Пишем лог активности
     addLogEntry(`Зарегистрировано новое дело: ${item.number} (Категория: ${item.category})`);
     
     form.reset(); num.value = nextNumber(false); $('[data-today]', form).value = todayISO();
@@ -414,7 +485,6 @@ function renderJournal() {
   });
   $('#caseCount') && ($('#caseCount').textContent = String(list.length));
   
-  // Рендерим с оберткой .actions-wrapper для предотвращения бага линии
   body.innerHTML = list.length ? list.map((item, index) => `
     <tr class="${overdue(item) ? 'overdue' : ''} table-row-animate" style="animation-delay: ${index * 0.02}s">
       <td><span class="case-title">${item.number}</span><div class="sub">${fmtDate(item.created)}</div></td>
@@ -816,8 +886,52 @@ async function init() {
 
   // Запуск загрузочного экрана и дешифрования данных
   runDecryptionBoot(async () => {
-      await reloadDocs();
-      renderAll();
+      if (firebaseConnected) {
+          addLogEntry("Подключение к удаленному серверу Firebase...");
+          
+          // Выполняем анонимный вход
+          auth.signInAnonymously()
+              .then(() => {
+                  console.log('✅ Анонимная авторизация успешна');
+                  
+                  // Загрузка счетчика в реальном времени
+                  counterRef.on('value', snapshot => {
+                      const val = snapshot.val();
+                      if (val) {
+                          counterCache = Number(val);
+                      } else {
+                          counterCache = 1;
+                      }
+                      renderAll();
+                  });
+                  
+                  // Синхронизация дел в реальном времени с Firebase!
+                  casesRef.on('value', async snapshot => {
+                      const data = snapshot.val();
+                      if (data) {
+                          casesCache = Object.values(data);
+                          casesCache.sort((a, b) => (b.created || '').localeCompare(a.created || ''));
+                      } else {
+                          casesCache = [];
+                      }
+                      await reloadDocs();
+                      renderAll();
+                  });
+              })
+              .catch(async error => {
+                  console.error('Ошибка авторизации Firebase:', error);
+                  addLogEntry('⚠️ Сбой авторизации сервера! Запущен автономный режим.');
+                  casesCache = JSON.parse(localStorage.getItem(CASE_STORE) || '[]');
+                  await reloadDocs();
+                  renderAll();
+              });
+      } else {
+          // Автономный режим по умолчанию
+          addLogEntry('Служба Firebase недоступна. Включен автономный режим.');
+          casesCache = JSON.parse(localStorage.getItem(CASE_STORE) || '[]');
+          await reloadDocs();
+          renderAll();
+      }
   });
 }
 
