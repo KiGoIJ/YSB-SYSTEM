@@ -4,38 +4,70 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>УСБ | Темная рабочая система</title>
-  <link rel="stylesheet" href="assets/css/glass.css">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="glass.css">
 </head>
 <body>
+
+  <!-- КАНВА ДЛЯ НЕЙРОСЕТЕВОГО ФОНА -->
+  <canvas id="loginMatrixCanvas" style="position: fixed; top:0; left:0; width:100%; height:100%; z-index:-1; pointer-events:none; opacity: 0.4;"></canvas>
+
+  <!-- ЭКРАН ДЕШИФРОВАНИЯ И ЗАГРУЗКИ (Holographic Boot Overlay) -->
+  <div id="decryptingScreen" class="decrypting-screen" style="display: none;">
+      <div class="decrypting-container">
+          <div class="scanner-line"></div>
+          <div class="terminal-header">
+              <i class="fas fa-shield-alt"></i> СИСТЕМА УСБ GLASS : ДЕШИФРОВАНИЕ ЛОКАЛЬНЫХ ДАННЫХ
+          </div>
+          <div class="terminal-body" id="terminalLog"></div>
+          <div class="cyber-progress-bar">
+              <div class="cyber-progress-fill" id="cyberProgressFill"></div>
+          </div>
+          <div class="percent-display" id="cyberPercent">0%</div>
+      </div>
+  </div>
+
 <div class="app">
+  <!-- ОФИЦИАЛЬНЫЙ БЛАНК УСБ -->
   <header class="letterhead glass">
     <div class="doc-number">№ 009–GL–усб</div>
     <div class="org-block">
-      <img src="assets/img/emblem.png" alt="Эмблема">
+      <!-- Роскошная векторная эмблема щита и меча -->
+      <div class="emblem-wrapper">
+          <i class="fas fa-shield-alt"></i>
+      </div>
       <div class="org-title">Федеральная<br>служба безопасности<br>Российской Федерации<br>(ФСБ России)</div>
       <div class="org-subtitle">Управление<br>по Ленинградской области<br>и по городу Санкт-Петербург</div>
-      <div class="org-address">191000, г. Санкт-Петербург, адрес: __________________</div>
+      <div class="org-address">191000, г. Санкт-Петербург, адрес: Литейный пр., д. 4</div>
       <div class="org-dept">Управление собственной безопасности</div>
     </div>
   </header>
 
   <div class="topbar glass">
-    <div class="brand">УСБ System Glass</div>
+    <div class="brand"><i class="fas fa-shield-alt" style="color: #cfa134; margin-right: 6px;"></i> УСБ System Glass</div>
     <input id="commandInput" class="command" placeholder="Быстрый поиск: дело, документ, раздел... Ctrl+K">
-    <div id="timebox" class="timebox"></div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <button id="toggleSoundBtn" class="btn" style="min-height: 38px; padding: 0 14px; border-radius: 999px;" title="Звуки системы">
+          <i class="fas fa-volume-up"></i>
+      </button>
+      <div id="timebox" class="timebox"></div>
+    </div>
   </div>
   <div id="commandResults" class="command-results"></div>
 
   <div class="layout">
     <aside class="sidebar glass">
       <div class="nav-title">Система</div>
-      <button class="nav-btn" data-nav="dashboard">Сводка <kbd>Alt+1</kbd></button>
-      <button class="nav-btn" data-nav="intake">Новое дело <kbd>Alt+2</kbd></button>
-      <button class="nav-btn" data-nav="journal">Журнал дел <kbd>Alt+3</kbd></button>
-      <button class="nav-btn" data-nav="documents">Документы <kbd>Alt+4</kbd></button>
-      <button class="nav-btn" data-nav="workflow">Регламент <kbd>Alt+5</kbd></button>
-      <button class="nav-btn" data-nav="reports">Отчет <kbd>Alt+6</kbd></button>
-      <button class="nav-btn" data-nav="settings">Настройки <kbd>Alt+7</kbd></button>
+      <button class="nav-btn" data-nav="dashboard"><i class="fas fa-chart-line"></i> Сводка <kbd>Alt+1</kbd></button>
+      <button class="nav-btn" data-nav="intake"><i class="fas fa-folder-plus"></i> Новое дело <kbd>Alt+2</kbd></button>
+      <button class="nav-btn" data-nav="journal"><i class="fas fa-book"></i> Журнал дел <kbd>Alt+3</kbd></button>
+      <button class="nav-btn" data-nav="documents"><i class="fas fa-file-alt"></i> Документы <kbd>Alt+4</kbd></button>
+      <button class="nav-btn" data-nav="workflow"><i class="fas fa-project-diagram"></i> Регламент <kbd>Alt+5</kbd></button>
+      <button class="nav-btn" data-nav="reports"><i class="fas fa-print"></i> Отчет <kbd>Alt+6</kbd></button>
+      <button class="nav-btn" data-nav="settings"><i class="fas fa-sliders-h"></i> Настройки <kbd>Alt+7</kbd></button>
       <div class="nav-title">Принцип</div>
       <div class="side-note">Документы теперь не скачиваются с сайта. Они добавляются пользователем и хранятся локально в браузере.</div>
     </aside>
@@ -50,11 +82,11 @@
             <p>Минималистичная темная панель: дела, сроки, локальные документы и отчетность.</p>
           </div>
           <div class="actions">
-            <button class="btn primary" type="button" onclick="showScreen('intake')">Создать дело</button>
-            <button class="btn" type="button" onclick="showScreen('documents')">Добавить документ</button>
+            <button class="btn primary" type="button" onclick="showScreen('intake')"><i class="fas fa-plus"></i> Создать дело</button>
+            <button class="btn" type="button" onclick="showScreen('documents')"><i class="fas fa-file-upload"></i> Добавить документ</button>
           </div>
         </div>
-        <div class="notice danger"><strong>Публичный хостинг.</strong> GitHub Pages не является закрытой системой. Не вводите реальные секретные сведения, персональные данные и материалы проверок. Все дела и документы хранятся только локально в браузере.</div>
+        <div class="notice danger"><strong><i class="fas fa-exclamation-triangle" style="color:var(--danger); margin-right: 6px;"></i> Публичный хостинг.</strong> GitHub Pages не является закрытой системой. Не вводите реальные секретные сведения, персональные данные и материалы проверок. Все дела и документы хранятся только локально в браузере.</div>
         <div id="metrics" class="metrics"></div>
         <div class="grid-2">
           <section class="panel"><h2>Последние дела</h2><div class="table-wrap"><table class="site-table"><thead><tr><th>Номер</th><th>Категория</th><th>Статус</th><th>Тема</th><th>Срок</th></tr></thead><tbody id="recentCases"></tbody></table></div></section>
@@ -63,52 +95,54 @@
         <section class="panel">
           <h2>Новая логика работы</h2>
           <div class="grid-4">
-            <div class="card"><h3>1. Дело</h3><p>Любое обращение регистрируется как дело с номером, категорией и сроком.</p></div>
-            <div class="card"><h3>2. Материалы</h3><p>Документы добавляются в локальное хранилище и получают карточку доступа.</p></div>
-            <div class="card"><h3>3. Проверка</h3><p>Статусы ведутся через журнал: новая, в работе, ожидание, согласование.</p></div>
-            <div class="card"><h3>4. Контроль</h3><p>Отчет формируется по локальному журналу без скачивания документов.</p></div>
+            <div class="card"><h3><i class="fas fa-folder" style="color: #cfa134;"></i> 1. Дело</h3><p>Любое обращение регистрируется как дело с номером, категорией и сроком.</p></div>
+            <div class="card"><h3><i class="fas fa-file-signature" style="color: #4299e1;"></i> 2. Материалы</h3><p>Документы добавляются в локальное хранилище и получают карточку доступа.</p></div>
+            <div class="card"><h3><i class="fas fa-tasks" style="color: #48bb78;"></i> 3. Проверка</h3><p>Статусы ведутся через журнал: новая, в работе, ожидание, согласование.</p></div>
+            <div class="card"><h3><i class="fas fa-shield-alt" style="color: #9f7aea;"></i> 4. Контроль</h3><p>Отчет формируется по локальному журналу без скачивания документов.</p></div>
           </div>
         </section>
       </section>
 
       <section class="screen" data-screen="intake">
-        <div class="screen-head glass"><div><h1>Новое дело</h1><p>Регистрация обращения, сигнала или поручения в локальном журнале УСБ.</p></div><div class="actions"><button class="btn" id="newNumberBtn" type="button">Выдать номер</button><button class="btn" id="resetCaseFormBtn" type="button">Очистить</button></div></div>
-        <section class="panel">
-          <form id="caseForm" class="form-grid">
-            <label><span>Номер дела</span><input class="input" name="number" placeholder="УСБ–26–0001"></label>
-            <label><span>Дата регистрации</span><input class="input" type="date" name="created" data-today></label>
-            <label><span>Категория</span><select name="category"><option>А – критическая</option><option>B – значимая</option><option selected>C – стандартная</option></select></label>
-            <label><span>Статус</span><select name="status"><option selected>Новая</option><option>В работе</option><option>Ожидает сведений</option><option>На согласовании</option></select></label>
-            <label><span>Заявитель</span><input class="input" name="applicant" placeholder="ФИО / ник / источник"></label>
-            <label><span>Подразделение / роль</span><input class="input" name="unit" placeholder="Подразделение или роль"></label>
-            <label><span>Способ связи</span><input class="input" name="contact" placeholder="Discord / почта / иной канал"></label>
-            <label><span>Ответственный инспектор</span><input class="input" name="inspector" placeholder="ФИО / ник инспектора"></label>
-            <label><span>Срок проверки</span><input class="input" type="date" name="deadline"></label>
-            <label><span>Объект / вопрос</span><input class="input" name="target" placeholder="Сотрудник, подразделение или процедура"></label>
-            <label class="full"><span>Краткая суть</span><textarea name="summary" placeholder="Что произошло, где, когда, какие правила могли быть нарушены"></textarea></label>
-            <label class="full"><span>Материалы / доказательства</span><textarea name="evidence" placeholder="Укажите, какие материалы есть. Файлы добавляются во вкладке Документы."></textarea></label>
-            <label class="full"><span>Просьба заявителя / требуемое действие</span><textarea name="request" placeholder="Проверить, разъяснить, принять меры, обеспечить конфиденциальность"></textarea></label>
-            <label class="full"><input type="checkbox" name="confidential"> Отметка о конфиденциальности заявителя</label>
-            <div class="full actions"><button class="btn primary" type="submit">Сохранить дело</button><button class="btn" type="button" onclick="navigator.clipboard.writeText(document.querySelector('#casePreview').textContent)">Копировать карточку</button></div>
-          </form>
-        </section>
-        <section class="panel"><h2>Предпросмотр карточки</h2><div id="casePreview" class="generated"></div></section>
+        <div class="screen-head glass"><div><h1>Новое дело</h1><p>Регистрация обращения, сигнала или поручения в локальном журнале УСБ.</p></div><div class="actions"><button class="btn" id="newNumberBtn" type="button"><i class="fas fa-barcode"></i> Выдать номер</button><button class="btn" id="resetCaseFormBtn" type="button"><i class="fas fa-undo"></i> Очистить</button></div></div>
+        <div class="form-cols-grid">
+          <section class="panel">
+            <form id="caseForm" class="form-grid">
+              <label><span>Номер дела</span><input class="input" name="number" placeholder="УСБ–26–0001" style="font-weight: 700; color: #cfa134;"></label>
+              <label><span>Дата регистрации</span><input class="input" type="date" name="created" data-today></label>
+              <label><span>Категория</span><select name="category"><option>А – критическая</option><option>B – значимая</option><option selected>C – стандартная</option></select></label>
+              <label><span>Статус</span><select name="status"><option selected>Новая</option><option>В работе</option><option>Ожидает сведений</option><option>На согласовании</option></select></label>
+              <label><span>Заявитель</span><input class="input" name="applicant" placeholder="ФИО / ник / источник"></label>
+              <label><span>Подразделение / роль</span><input class="input" name="unit" placeholder="Подразделение или роль"></label>
+              <label><span>Способ связи</span><input class="input" name="contact" placeholder="Discord / почта / иной канал"></label>
+              <label><span>Ответственный инспектор</span><input class="input" name="inspector" placeholder="ФИО / ник инспектора"></label>
+              <label><span>Срок проверки</span><input class="input" type="date" name="deadline"></label>
+              <label><span>Объект / вопрос</span><input class="input" name="target" placeholder="Сотрудник, подразделение или процедура"></label>
+              <label class="full"><span>Краткая суть</span><textarea name="summary" placeholder="Что произошло, где, когда, какие правила могли быть нарушены"></textarea></label>
+              <label class="full"><span>Материалы / доказательства</span><textarea name="evidence" placeholder="Укажите, какие материалы есть. Файлы добавляются во вкладке Документы."></textarea></label>
+              <label class="full"><span>Просьба заявителя / требуемое действие</span><textarea name="request" placeholder="Проверить, разъяснить, принять меры, обеспечить конфиденциальность"></textarea></label>
+              <label class="full" style="cursor: pointer; display: flex; align-items: center; gap: 8px;"><input type="checkbox" name="confidential"> Отметка о конфиденциальности заявителя</label>
+              <div class="full actions" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;"><button class="btn primary" type="submit"><i class="fas fa-save"></i> Сохранить дело</button><button class="btn" type="button" onclick="navigator.clipboard.writeText(document.querySelector('#casePreview').textContent); notify('Карточка скопирована в буфер обмена!');"><i class="fas fa-copy"></i> Копировать карточку</button></div>
+            </form>
+          </section>
+          <section class="panel"><h2>Предпросмотр карточки</h2><div id="casePreview" class="generated"></div></section>
+        </div>
       </section>
 
       <section class="screen" data-screen="journal">
-        <div class="screen-head glass"><div><h1>Журнал дел</h1><p>Локальный учет обращений. Найдено: <b id="caseCount">0</b>.</p></div></div>
+        <div class="screen-head glass"><div><h1>Журнал дел</h1><p>Локальный учет обращений. Найдено: <b id="caseCount" style="color: #cfa134;">0</b>.</p></div></div>
         <div class="toolbar">
           <input id="caseSearch" class="input" placeholder="Поиск по номеру, теме, заявителю, инспектору">
           <select id="caseStatus"><option>Все</option><option>Новая</option><option>В работе</option><option>Ожидает сведений</option><option>На согласовании</option><option>Закрыта</option><option>Архив</option></select>
           <select id="caseCategory"><option>Все</option><option>А</option><option>B</option><option>C</option></select>
-          <button class="btn primary" type="button" onclick="showScreen('intake')">Новое дело</button>
+          <button class="btn primary" type="button" onclick="showScreen('intake')"><i class="fas fa-plus"></i> Новое дело</button>
         </div>
         <section class="panel"><div class="table-wrap"><table class="site-table"><thead><tr><th>Номер</th><th>Категория</th><th>Статус</th><th>Тема</th><th>Инспектор / срок</th><th>Действия</th></tr></thead><tbody id="casesBody"></tbody></table></div></section>
       </section>
 
       <section class="screen" data-screen="documents">
-        <div class="screen-head glass"><div><h1>Документы</h1><p>Теперь документы не скачиваются с сайта, а добавляются в локальное хранилище браузера. Найдено: <b id="docsCount">0</b>.</p></div><div class="actions"><button class="btn danger" id="clearDocsBtn" type="button">Очистить документы</button></div></div>
-        <div class="notice warn"><strong>Как это работает.</strong> Вы выбираете файл, система сохраняет его в IndexedDB текущего браузера и показывает карточку. Другие пользователи этот файл не видят. Кнопок скачивания документов нет.</div>
+        <div class="screen-head glass"><div><h1>Документы</h1><p>Теперь документы не скачиваются с сайта, а добавляются в локальное хранилище браузера. Найдено: <b id="docsCount" style="color: #cfa134;">0</b>.</p></div><div class="actions"><button class="btn danger" id="clearDocsBtn" type="button"><i class="fas fa-trash-alt"></i> Очистить документы</button></div></div>
+        <div class="notice warn"><strong><i class="fas fa-info-circle" style="color: var(--warn); margin-right: 6px;"></i> Как это работает.</strong> Вы выбираете файл, система сохраняет его в IndexedDB текущего браузера и показывает карточку. Другие пользователи этот файл не видят. Кнопок скачивания документов нет.</div>
         <section class="panel">
           <h2>Добавить документ</h2>
           <form id="docForm" class="form-grid">
@@ -117,7 +151,7 @@
             <label><span>Уровень доступа</span><select name="docAccess"><option>Служебный</option><option>Конфиденциальный</option><option>Особый контроль</option><option>Архив</option></select></label>
             <label><span>Файл</span><input class="input" name="docFile" type="file"><div class="help">Файл будет храниться только в этом браузере.</div></label>
             <label class="full"><span>Примечание</span><textarea name="docNotes" placeholder="К какому делу относится, кто ответственный, ограничения доступа"></textarea></label>
-            <div class="full actions"><button class="btn primary" type="submit">Добавить документ</button><button class="btn" type="button" id="copyDocsRegistryBtn">Копировать реестр</button></div>
+            <div class="full actions" style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;"><button class="btn primary" type="submit"><i class="fas fa-file-medical"></i> Добавить документ</button><button class="btn" type="button" id="copyDocsRegistryBtn"><i class="fas fa-file-invoice"></i> Копировать реестр</button></div>
           </form>
         </section>
         <section class="panel">
@@ -126,7 +160,7 @@
             <input id="docSearch" class="input" placeholder="Поиск по документам">
             <select id="docCategoryFilter"><option>Все</option><option>Обращение</option><option>Материалы проверки</option><option>Заключение</option><option>Приказ</option><option>Отчет</option><option>Кадры</option><option>Архив</option><option>Прочее</option></select>
             <select id="docAccessFilter"><option>Все</option><option>Служебный</option><option>Конфиденциальный</option><option>Особый контроль</option><option>Архив</option></select>
-            <button class="btn" type="button" onclick="document.querySelector('#docSearch').value=''; renderDocuments();">Сброс</button>
+            <button class="btn" type="button" onclick="document.querySelector('#docSearch').value=''; renderDocuments();"><i class="fas fa-sync-alt"></i> Сброс</button>
           </div>
           <div id="documentsGrid" class="docs-grid"></div>
         </section>
@@ -146,20 +180,20 @@
       </section>
 
       <section class="screen" data-screen="reports">
-        <div class="screen-head glass"><div><h1>Отчетность</h1><p>Сводка формируется по локальному журналу и локальным документам.</p></div><div class="actions"><button class="btn primary" id="copyReportBtn" type="button">Копировать отчет</button></div></div>
+        <div class="screen-head glass"><div><h1>Отчетность</h1><p>Сводка формируется по локальному журналу и локальным документам.</p></div><div class="actions"><button class="btn primary" id="copyReportBtn" type="button"><i class="fas fa-copy"></i> Копировать отчет</button></div></div>
         <section class="panel"><h2>Недельная сводка</h2><div id="reportOutput" class="report-box"></div></section>
       </section>
 
       <section class="screen" data-screen="settings">
         <div class="screen-head glass"><div><h1>Настройки</h1><p>Управление локальными данными браузера.</p></div></div>
-        <section class="notice warn"><strong>Локальное хранение.</strong> Дела находятся в localStorage, документы – в IndexedDB. Очистка данных браузера удалит информацию.</section>
-        <section class="panel"><h2>Резерв дел</h2><div class="actions"><button class="btn primary" id="copyCasesJsonBtn" type="button">Копировать JSON дел</button><button class="btn" id="importCasesJsonBtn" type="button">Импортировать JSON дел</button></div></section>
-        <section class="panel"><h2>Счетчик и очистка</h2><div class="actions"><button class="btn" id="resetCounterBtn" type="button">Изменить счетчик номеров</button><button class="btn danger" id="clearCasesBtn" type="button">Очистить журнал дел</button></div></section>
+        <section class="notice warn"><strong><i class="fas fa-exclamation-triangle" style="color:var(--warn); margin-right: 6px;"></i> Локальное хранение.</strong> Дела находятся в localStorage, документы – в IndexedDB. Очистка данных браузера удалит информацию.</section>
+        <section class="panel"><h2>Резерв дел</h2><div class="actions"><button class="btn primary" id="copyCasesJsonBtn" type="button"><i class="fas fa-copy"></i> Копировать JSON дел</button><button class="btn" id="importCasesJsonBtn" type="button"><i class="fas fa-file-import"></i> Импортировать JSON дел</button></div></section>
+        <section class="panel"><h2>Счетчик и очистка</h2><div class="actions"><button class="btn" id="resetCounterBtn" type="button"><i class="fas fa-sort-numeric-up"></i> Изменить счетчик номеров</button><button class="btn danger" id="clearCasesBtn" type="button"><i class="fas fa-ban"></i> Очистить журнал дел</button></div></section>
       </section>
     </main>
   </div>
   <footer class="footer">УСБ РУ ФСБ по ЛО и по городу Санкт-Петербург · темная локальная система · без скачивания документов</footer>
 </div>
-<script src="assets/js/glass-system.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2037d277eacd102',t:'MTc4NDkwMjAyMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script src="glass-system.js"></script>
+</body>
 </html>
